@@ -5,3 +5,5 @@ pipeline/figures
 pipeline/frames
 pipeline/images
 pipeline/executables
+pipeline/ssd.h
+pipeline/ssd.cpp
