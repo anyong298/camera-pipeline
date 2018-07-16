@@ -7,7 +7,7 @@
 #include <vector>
 #include <list>
 #include "temporal.h"
-
+#include<time.h>
 
 
 using namespace std;
@@ -72,23 +72,33 @@ void sort_neighbors(vector<vector<int16_t>>* a)
 	}
 }
 
-void push_in_heap(vector<vector<short>>* my_vector, vector<short> element)
+void push_in_heap(vector<vector<short>*>* my_vector, vector<short>* element)
 {
-    vector<vector<short>>::iterator it = my_vector->begin();
-    for(uint i = 0; i < my_vector->size() - 1; ++i) {
-        
-        if((it + i)->at(2) < element.at(2) && (it + i + 1)->at(2) > element.at(2)) {    
-            my_vector->insert(it + i + 1, element);
-            return;
-        }
-    }
-    
-    my_vector->insert(my_vector->end(), element);
-     
+    vector<vector<short>*>::iterator it = my_vector->begin();
+    if(my_vector->size() == 0)
+        my_vector->insert(my_vector->end(), element);
+    else if(my_vector->size() == 1 && my_vector->at(0)->at(2) > element->at(2))
+        my_vector->insert(it, element);
+    else if(my_vector->size() == 1 && my_vector->at(0)->at(2) < element->at(2))
+        my_vector->insert(my_vector->end(), element);
+    else {
+        for(uint i = 0; i < my_vector->size() - 1; ++i) 
+            if(my_vector->size() > 1 && 
+                    (*(it + i + 1))->at(2) >= element->at(2)) {    
+                my_vector->insert(it + i, element);
+                maintain_size(my_vector);
+                return;
+            }
+    } 
 }
 
-
-
+void maintain_size(vector<vector<short>*>* my_vector)
+{
+    //cout<<"coming here --------------------------------------------------------------------"<<endl;
+    if(my_vector->size() > K) {
+       my_vector->erase(my_vector->begin() + my_vector->size() - 1);
+    }    
+}
 
 void print_heap(vector<vector<int16_t>> heap, int x, int y) 
 {

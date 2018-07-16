@@ -21,13 +21,11 @@ const int height = 50;
 const int n_channels = 3;
 const int n_frames = 5;
 
-const int K = 10; //number of neighbors
+typedef vector<short>* coord_t;
+typedef vector<short>* coord_ssd_t;
+typedef vector<coord_ssd_t>* heap_t;
 
-typedef vector<short> coord_t;
-typedef vector<short> coord_ssd_t;
-typedef vector<coord_ssd_t> heap_t;
-
-heap_t* neighbors_h[height][width];
+heap_t neighbors_h[height][width];
 
 
 int main(int argc, char** argv) 
@@ -37,10 +35,18 @@ int main(int argc, char** argv)
     get_input();
     load_halide_functions(); 
     initiate_neighbors();
-    print_neighbors(neighbors_h[1][1]);
-    propagate_neighbors();
-    
-    // random_search();
+    //for(int y = 0; y < 5; ++y)
+    //    for(int x = 0; x < 5; ++x) {
+    //        cout<<"y "<<y<<" x "<<x<<endl;
+            print_neighbors(neighbors_h[0][0]);
+    //    }
+    //    propagate_neighbors();
+    //for(int y = 0; y < 5; ++y)
+    //   for(int x = 0; x < 5; ++x) {
+    //       cout<<"y "<<y<<" x "<<x<<endl;
+    //       print_neighbors(neighbors_h[y][x]);
+    //   }
+    //random_search();
     
     t = clock() - t;
     cout<<(float)t/CLOCKS_PER_SEC<<" seconds"<<endl;
@@ -53,10 +59,8 @@ void get_input()
     string path;
 
     for(int i = 0; i < n_frames; i++) {
-
         path = "./frames/f_" + to_string(i + 1) + ".png";
         input[i] = Tools::load_image(path);   
-
     }
 
 }
@@ -119,39 +123,33 @@ void load_halide_functions()
 void initiate_neighbors() 
 {
     srand(17);
-    for(short y = 0; y < height; y++) {
+    for(short y = 0; y < height; y++)
         for(short x = 0; x < width; x++) {
-            
-            heap_t* neighbors;
-            neighbors = new heap_t;
+            heap_t neighbors;
+            neighbors = new vector<vector<short>*>;
             neighbors->reserve(40); 
             generate_random_offsets_and_ssds(x, y, neighbors); 
-            sort_neighbors(neighbors);
             neighbors_h[y][x] = neighbors;
-                        
-         } 
-    }
-     
+         }
     cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl;
 }
 
-void generate_random_offsets_and_ssds(short x, short y, heap_t* neighbors)
+void generate_random_offsets_and_ssds(short x, short y, heap_t neighbors)
 {
-    for(short i = 0; i < K; i++) {
+    for(ushort i = 0; i < K; i++) {
         coord_ssd_t v_i_ssd = get_neighbor_ssd(x, y);
-        neighbors->push_back(v_i_ssd);
+        push_in_heap(neighbors, v_i_ssd);
     }
-
 }
 
 
-void print_offset_and_ssd(coord_ssd_t offset_ssd) 
+void print_offset_and_ssd(vector<short>* offset_ssd) 
 {
-    cout<<"x_i "<<offset_ssd.at(0)<<" y_i "<<offset_ssd.at(1)
-        <<" ssd "<<offset_ssd.at(2)<<endl;
+    cout<<"x_i "<<offset_ssd->at(0)<<" y_i "<<offset_ssd->at(1)
+        <<" ssd "<<offset_ssd->at(2)<<endl;
 }
 
-void print_neighbors(heap_t* heap) 
+void print_neighbors(vector<vector<short>*>* heap) 
 {
     for(uint i = 0; i < heap->size(); i++) {
         print_offset_and_ssd(heap->at(i));
@@ -160,7 +158,10 @@ void print_neighbors(heap_t* heap)
 
 coord_t get_random_coord() 
 {
-    return {get_random_x(), get_random_y()};
+    coord_t coord = new vector<short>;
+    coord->push_back(get_random_x());
+    coord->push_back(get_random_y());
+    return coord;
 }
 
 
@@ -199,9 +200,9 @@ coord_ssd_t get_neighbor_ssd(short x, short y)
 
     Buffer<short> pix(1, 1, 1, 1, 3);
     coord_t coord = get_random_coord();
-    pix.set_min(x, y, x + coord[0], y + coord[1]);   
+    pix.set_min(x, y, x + coord->at(0), y + coord->at(1));   
     D.realize(pix);
-    coord.push_back(pix(x, y, x + coord[0], y + coord[1], 0)); //pushing ssd
+    coord->push_back(pix(x, y, x + coord->at(0), y + coord->at(1), 0)); //pushing ssd
     return coord;
 
 }
@@ -211,75 +212,78 @@ void propagate_neighbors()
 {
     for(short y = 1; y < height; ++y)     
         for(short x = 1; x < width; ++x) {
-            cout<<"y "<<y<<" x "<<x<<endl;
+            //cout<<"y "<<y<<" x "<<x<<endl;
             propagate_scanline(x, y);
             if(x == 1 && y == 1)
                 print_neighbors(neighbors_h[1][1]);
         }
    
-    for(short y = height - 2; y >= 0; --y)     
-        for(short x = width - 2; x >= 0; --x) {
-            cout<<"y "<<y<<" x "<<x<<endl;
-            propagate_reverse_scanline(x, y);
-        }
-}
-
+    //for(short y = height - 2; y >= 0; --y)     
+    //    for(short x = width - 2; x >= 0; --x) {
+    //        cout<<"y "<<y<<" x "<<x<<endl;
+    //        propagate_reverse_scanline(x, y);
+    //    }
+} 
 
 
 void propagate_scanline(short x, short y)
 {
-    short offset_x, offset_y, offset_ssd;
+    short offset_x, offset_y, offset_ssd; 
     
-    for(heap_t::iterator it = neighbors_h[y][x - 1]->begin(); 
+    for(vector<vector<short>*>::iterator it = neighbors_h[y][x - 1]->begin(); 
         it != neighbors_h[y][x - 1]->end(); ++it) {
-        
-        offset_x = it->at(0);
-        offset_y = it->at(1);
-        offset_ssd = it->at(2);    
-        
-        push_in_heap(neighbors_h[y][x], {(short)(offset_x + 1), offset_y, 
-            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'r')});
+        //cout<<"neighbors_h["<<y<<"]["<<x - 1<<"]->size() "<<neighbors_h[y][x - 1]->size()<<endl;
+        //cout<<"neighbors_h["<<y<<"]["<<x<<"]->size() "<<neighbors_h[y][x]->size()<<endl<<endl;
+        coord_ssd_t prop_neighbor = new vector<short>;
+        offset_x = (*it)->at(0);
+        offset_y = (*it)->at(1);
+        offset_ssd = (*it)->at(2);         
+        prop_neighbor->push_back((short) offset_x + 1);
+        prop_neighbor->push_back(offset_y);
+        prop_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'r')); 
+        push_in_heap(neighbors_h[y][x], prop_neighbor);
     }
-    
-    for(heap_t::iterator it = neighbors_h[y - 1][x]->begin(); 
-        it != neighbors_h[y - 1][x]->end(); ++it) {
-        
-        offset_x = it->at(0);
-        offset_y = it->at(1);
-        offset_ssd = it->at(2);
-       
-        push_in_heap(neighbors_h[y][x], {offset_x, (short)(offset_y + 1), 
-            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'd')}); 
-    }
+
+    //for(vector<vector<short>*>::iterator it = neighbors_h[y - 1][x]->begin(); 
+    //    it != neighbors_h[y - 1][x]->end(); ++it) {
+    //    coord_ssd_t prop_neighbor = new vector<short>;
+    //    offset_x = (*it)->at(0);
+    //    offset_y = (*it)->at(1);
+    //    offset_ssd = (*it)->at(2); 
+    //    prop_neighbor->push_back(offset_x);
+    //    prop_neighbor->push_back((short) offset_y + 1);
+    //    prop_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'd')); 
+    //    push_in_heap(neighbors_h[y][x], prop_neighbor);
+    //}
 }
 
 
-void propagate_reverse_scanline(short x, short y)
-{
-    for(heap_t::iterator it = neighbors_h[y][x + 1]->begin(); 
-        it != neighbors_h[y][x + 1]->end(); ++it) {
-        
-        short offset_x = it->at(0);
-        short offset_y = it->at(1);
-        short offset_ssd = it->at(2);    
-        
-        neighbors_h[y][x]->push_back({(short)(offset_x - 1), offset_y, 
-            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'l')});
-        
-    }
 
-    for(heap_t::iterator it = neighbors_h[y + 1][x]->begin(); 
-        it != neighbors_h[y + 1][x]->end(); ++it) {
-        
-        short offset_x = it->at(0);
-        short offset_y = it->at(1);
-        short offset_ssd = it->at(2);    
-        
-        neighbors_h[y][x]->push_back({offset_x, (short)(offset_y - 1), 
-            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'u')});
-    }
 
-}
+//void propagate_reverse_scanline(short x, short y)
+//{
+//    for(heap_t::iterator it = neighbors_h[y][x + 1]->begin(); 
+//        it != neighbors_h[y][x + 1]->end(); ++it) {
+//        
+//        short offset_x = it->at(0);
+//        short offset_y = it->at(1);
+//        short offset_ssd = it->at(2);    
+//        
+//        neighbors_h[y][x]->push_back({(short)(offset_x - 1), offset_y, 
+//            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'l')});
+//    }
+//
+//    for(heap_t::iterator it = neighbors_h[y + 1][x]->begin(); 
+//        it != neighbors_h[y + 1][x]->end(); ++it) {
+//        
+//        short offset_x = it->at(0);
+//        short offset_y = it->at(1);
+//        short offset_ssd = it->at(2);    
+//        
+//        neighbors_h[y][x]->push_back({offset_x, (short)(offset_y - 1), 
+//            calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'u')});
+//    }
+//}
 
 
 
@@ -318,7 +322,6 @@ short calculate_new_ssd(short x, short y, short offset_x,
         default:
             cerr<<"wrong direction character"<<endl;
     }
-    
     return offset_ssd - subtract_b(x, y, x + offset_x, y + offset_y, 0) 
         + add_b(x, y, x + offset_x, y + offset_y, 0);
 }

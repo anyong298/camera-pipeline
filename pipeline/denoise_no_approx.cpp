@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 	box_filtered(x, y, c) = u8((float)(1) / ((2 * L + 1) * (2 * L + 1)) * sum(input(x - l_r.x, y - l_r.y, c)));
 	
 	// Compute box filtered image
-/*	Expr clamped_x = clamp(x, L, input.width() - 2 * L - 1);
+	Expr clamped_x = clamp(x, L, input.width() - 2 * L - 1);
 	Expr clamped_y = clamp(y, L, input.height() - 2 * L - 1);
 
 	imp_bi_filter_num(x, y, c) = f32(sum(g_sig_s(omega.x, omega.y) * g_sig_r(box_filtered(x - omega.x, y - omega.y, c) - box_filtered(x, y, c)) * input(x - omega.x, y - omega.y, c)));
@@ -61,11 +61,11 @@ int main(int argc, char **argv) {
 	
 	imp_bi_filter(x, y, c) = u8(imp_bi_filter_num_clamped(x, y, c) / imp_bi_filter_den_clamped(x, y, c));
 	//imp_bi_filter.trace_stores()
-*/
+
 	Buffer<uint8_t> shifted(input.width() - 2 * W, input.height() - 2 * W, input.channels());
 	shifted.set_min(W, W);
-	box_filtered.trace_stores();
-	box_filtered.realize(shifted);
+	//imp_bi_filter.trace_stores();
+	imp_bi_filter.realize(shifted);
 
 	Tools::save_image(shifted, "box_filtered.png");
 
