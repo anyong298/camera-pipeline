@@ -9,7 +9,7 @@ int i_right_child(int i);
 void swap_element(vector<vector<short>>* a, int b, int c);
 void sift_down(vector<vector<short>> *a, int start, int end);
 void heapify(vector<vector<short>>* a);
-void sort_neighbors(vector<vector<short>>* a);
+void sort_neighbors(vector<vector<short>*>* a);
 vector<short>* get_neighbor_ssd(short x, short y);
 short get_random_x_y();
 vector<short>* get_random_coord();

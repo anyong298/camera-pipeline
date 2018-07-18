@@ -1,12 +1,12 @@
 addpath('mex');
 
 % we provide two sequences "car" and "table"
-example = 'table';
-%example = 'car';
+%example = 'table';
+example = '';
 
 % load the two frames
-im1 = im2double(imread([example '1.jpg']));
-im2 = im2double(imread([example '2.jpg']));
+im1 = im2double(imread(['2753.png']));
+im2 = im2double(imread(['2754.png']));
 
 % im1 = imresize(im1,0.5,'bicubic');
 % im2 = imresize(im2,0.5,'bicubic');
