@@ -7,3 +7,5 @@ pipeline/images
 pipeline/executables
 pipeline/ssd.h
 pipeline/ssd.cpp
+opencv_contrib
+opencv
