@@ -8,7 +8,8 @@
 #include "Halide.h"
 #define OBR_HEIGHT 10
 using namespace Halide;
-using namespace Halide::ConciseCasts;
+using namespace Tools;
+using namespace ConciseCasts;
 
 
 Buffer<uint8_t> obr(Buffer<uint8_t> input) 
@@ -42,7 +43,6 @@ Buffer<uint8_t> obr(Buffer<uint8_t> input)
 
 Buffer<uint8_t> demosaic(Buffer<uint8_t> input0) 
 {
-//    Buffer<uint8_t> input0 = load_image("images/" + string(argv[1]));
 
 	Var x("x"), y("y"), c("c");
 
@@ -232,8 +232,6 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 	Buffer<uint8_t> output =
         demosaicRGB.realize(input.width(), input.height(), input.channels());
 
-    //Tools::save_image(output, "demosaic.png");
-
 	return output;
 
 }
@@ -335,16 +333,16 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input)
 	slope[1] = 255 / max_g;
 	slope[2] = 255 / max_b;
 
-	Halide::Func white_balance("white_balance");
+	Func white_balance("white_balance");
 
 	Var x("x"), y("y"), c("c");
 
 	white_balance(x, y, c) = input(x, y, c);
-	white_balance(x, y, 0) = cast<uint8_t>(Halide::min(input(x, y, 0) * slope[0], 255.0f));
-	white_balance(x, y, 1) = cast<uint8_t>(Halide::min(input(x, y, 1) * slope[1], 255.0f));
-	white_balance(x, y, 2) = cast<uint8_t>(Halide::min(input(x, y, 2) * slope[2], 255.0f));
+	white_balance(x, y, 0) = cast<uint8_t>(min(input(x, y, 0) * slope[0], 255.0f));
+	white_balance(x, y, 1) = cast<uint8_t>(min(input(x, y, 1) * slope[1], 255.0f));
+	white_balance(x, y, 2) = cast<uint8_t>(min(input(x, y, 2) * slope[2], 255.0f));
 
-	Halide::Buffer<uint8_t> output =
+	Buffer<uint8_t> output =
         white_balance.realize(input.width(), input.height(), input.channels());
 
 	return output;
@@ -360,7 +358,7 @@ Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 	// float gamma = 1/2.2;
 
 	Func correct("correct");
-	Halide::Var x("x"), y("y"), c;
+	Var x("x"), y("y"), c;
 
 	Expr value = cast<float>(input(x, y, c));
 
@@ -379,17 +377,12 @@ Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 
 Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
 {
-	//First find the brightest pixel
-
-	float max = -1, mag, max_r, max_g, max_b;
-	uint8_t offset_r, offset_g, offset_b;
-
-	Halide::Func demosaic("demosaic");
+	Func demosaic("demosaic");
 	// demosaic.trace_stores();
 
 	Var x("x"), y("y"), c("c");
 	
-	// Halide::Expr value;
+	// Expr value;
 
 	demosaic(x, y, c) = input(x, y, c);
 
@@ -434,7 +427,7 @@ Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
 	demosaic(g2.x, g2.y, 0) = (input(g2.x + 1, g2.y, 0) / 2 + input(g2.x - 1, g2.y, 0) / 2);
 	demosaic(g2.x, g2.y, 2) = (input(g2.x, g2.y + 1, 2) / 2 + input(g2.x, g2.y - 1, 2) / 2);
 
-	Halide::Buffer<uint8_t> output =
+	Buffer<uint8_t> output =
         demosaic.realize(input.width(), input.height(), input.channels());
 
 
