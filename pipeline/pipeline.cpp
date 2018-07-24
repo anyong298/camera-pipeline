@@ -353,9 +353,6 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input)
 
 Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 {
-    //Buffer<uint8_t> input = load_image("images/" + string(argv[1]));
-
-	// float gamma = 1/2.2;
 
 	Func correct("correct");
 	Var x("x"), y("y"), c;
@@ -369,8 +366,6 @@ Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 
 	Buffer<uint8_t> output = correct.realize(input.width(), input.height(), input.channels());
 
-    //save_image(output, "gamma_corrected.png");
-
 	return output;
 
 }
@@ -378,7 +373,6 @@ Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
 {
 	Func demosaic("demosaic");
-	// demosaic.trace_stores();
 
 	Var x("x"), y("y"), c("c");
 	
@@ -408,7 +402,7 @@ Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
 	demosaic(b.x, b.y, 0) = (input(b.x + 1, b.y + 1, 0) / 4 + input(b.x - 1, b.y + 1, 0) / 4 + input(b.x + 1, b.y - 1, 0) / 4 + input(b.x - 1, b.y - 1, 0) / 4);
 	demosaic(b.x, b.y, 1) = (input(b.x + 1, b.y, 1) / 4 + input(b.x, b.y + 1, 1) / 4 + input(b.x - 1, b.y, 1) / 4 + input(b.x, b.y - 1, 1) / 4);
 
-	//Green 01
+	//Green
 
 	RDom g1(1, input.width() - 2, 1, input.height() - 2);
 	g1.where(g1.x % 2 == 0);
@@ -416,9 +410,6 @@ Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
 
 	demosaic(g1.x, g1.y, 0) = (input(g1.x, g1.y + 1, 0) / 2 + input(g1.x, g1.y - 1, 0) / 2);
 	demosaic(g1.x, g1.y, 2) = (input(g1.x + 1, g1.y, 2) / 2 + input(g1.x - 1, g1.y, 2) / 2);
-
-
-	//Green 02
 
 	RDom g2(1, input.width() - 2, 1, input.height() - 2);
 	g2.where(g2.x % 2 == 1);
