@@ -300,19 +300,21 @@ Buffer<uint8_t> denoise_no_approx(Buffer<uint8_t> input)
 
 
 float slope[3];
-Buffer<uint8_t> white_balance(Buffer<uint8_t> input, char* arg1, char* arg2, char* arg3)
+Buffer<uint8_t> white_balance(Buffer<uint8_t> input)
 {
-    // Buffer<uint8_t> input = Tools::load_image("images/rgb.jpg");
-	//Halide::Buffer<uint8_t> input = load_image("images/" + std::string(argv[1]));
+	Func magnitude("magnitude");
+	Var i, j;
 
-	//First find the brightest pixel
+	magnitude(i, j) = sqrt(input(i, j, 0) * input(i, j, 0) + input(i, j, 1) * input(i, j, 1)
+				 + input(i, j, 2) * input(i, j, 2));
+	Buffer<uint8_t> mag = magnitude.realize(input.width(), input.height());
 
-	float max = -1, tmp, max_r, max_g, max_b, mag[input.width()][input.height()];
-	int w1, w2, w3;
+	float max = -1, tmp, max_r, max_g, max_b;
+	int w1 = 1, w2 = 1, w3 = 1;
 
-	sscanf(arg1, "%d", &w1);
-	sscanf(arg2, "%d", &w2);
-	sscanf(arg3, "%d", &w3);
+	// sscanf(argv[2], "%d", &w1);
+	// sscanf(argv[3], "%d", &w2);
+	// sscanf(argv[4], "%d", &w3);
 
 	// printf("%d\n", input(0, 0, 1));
 	for(int i = 0; i < input.width(); i++){
@@ -324,9 +326,9 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input, char* arg1, char* arg2, cha
 
 	for(int i = 1; i < input.width() - 1; i++){
 		for(int j = 1; j < input.height() - 1; j++){
-			tmp = mag[i][j] * w1 
-					+ (mag[i + 1][j] + mag[i][j + 1] + mag[i - 1][j] + mag[i][j - 1] ) / 4 * w2
-					+ (mag[i - 1][j - 1] + mag[i + 1][j + 1] + mag[i + 1][j - 1] + mag[i - 1][j + 1]) / 4 * w3; //get teh magnitude of current RGB vector
+			tmp = mag(i, j) * w1 
+					+ (mag(i + 1, j) + mag(i, j + 1) + mag(i - 1, j) + mag(i, j - 1) ) / 4 * w2
+					+ (mag(i - 1, j - 1) + mag(i + 1, j + 1) + mag(i + 1, j - 1) + mag(i - 1, j + 1)) / 4 * w3; //get teh magnitude of current RGB vector
 			if(max < tmp){// if current RGB is bigger(brighter), update max values 
 				max = tmp;
 				max_r = input(i, j, 0);
@@ -344,7 +346,7 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input, char* arg1, char* arg2, cha
 
 	Halide::Func white_balance("white_balance");
 
-	Halide::Var x("x"), y("y"), c("c");
+	Var x("x"), y("y"), c("c");
 
 	white_balance(x, y, c) = input(x, y, c);
 	white_balance(x, y, 0) = cast<uint8_t>(Halide::min(input(x, y, 0) * slope[0], 255.0f));
@@ -353,8 +355,6 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input, char* arg1, char* arg2, cha
 
 	Halide::Buffer<uint8_t> output =
         white_balance.realize(input.width(), input.height(), input.channels());
-
-    //save_image(output, std::string(argv[1]) + "_balanced_" + std::string(argv[2]) + std::string(argv[3]) + std::string(argv[4]) + ".png");
 
 	return output;
 
