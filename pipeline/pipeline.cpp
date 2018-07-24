@@ -305,8 +305,7 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input)
 	Func magnitude("magnitude");
 	Var i, j;
 
-	magnitude(i, j) = sqrt(input(i, j, 0) * input(i, j, 0) + input(i, j, 1) * input(i, j, 1)
-				 + input(i, j, 2) * input(i, j, 2));
+	magnitude(i, j) = sqrt(input(i, j, 0) * input(i, j, 0) + input(i, j, 1) * input(i, j, 1) + input(i, j, 2) * input(i, j, 2));
 	Buffer<uint8_t> mag = magnitude.realize(input.width(), input.height());
 
 	float max = -1, tmp, max_r, max_g, max_b;
@@ -317,18 +316,10 @@ Buffer<uint8_t> white_balance(Buffer<uint8_t> input)
 	// sscanf(argv[4], "%d", &w3);
 
 	// printf("%d\n", input(0, 0, 1));
-	for(int i = 0; i < input.width(); i++){
-		for(int j = 0; j < input.height(); j++){
-			mag[i][j] = sqrt(input(i, j, 0) * input(i, j, 0) + input(i, j, 1) * input(i, j, 1)
-				 + input(i, j, 2) * input(i, j, 2));
-		}
-	}
 
 	for(int i = 1; i < input.width() - 1; i++){
 		for(int j = 1; j < input.height() - 1; j++){
-			tmp = mag(i, j) * w1 
-					+ (mag(i + 1, j) + mag(i, j + 1) + mag(i - 1, j) + mag(i, j - 1) ) / 4 * w2
-					+ (mag(i - 1, j - 1) + mag(i + 1, j + 1) + mag(i + 1, j - 1) + mag(i - 1, j + 1)) / 4 * w3; //get teh magnitude of current RGB vector
+			tmp = mag(i, j) * w1 + (mag(i + 1, j) + mag(i, j + 1) + mag(i - 1, j) + mag(i, j - 1) ) / 4 * w2 + (mag(i - 1, j - 1) + mag(i + 1, j + 1) + mag(i + 1, j - 1) + mag(i - 1, j + 1)) / 4 * w3; //get teh magnitude of current RGB vector
 			if(max < tmp){// if current RGB is bigger(brighter), update max values 
 				max = tmp;
 				max_r = input(i, j, 0);
