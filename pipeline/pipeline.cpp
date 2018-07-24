@@ -10,6 +10,7 @@
 using namespace Halide;
 using namespace Halide::ConciseCasts;
 
+
 Buffer<uint8_t> obr(Buffer<uint8_t> input) 
 {
     //Buffer<uint8_t> input = Tools::load_image(argv[1]);
@@ -59,7 +60,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 	RDom bg(2, input.width() - 4, 2, input.height() - 4);
 
-	bg.where(bg.x % 2 == 0);
+	bg.where(bg.x % 2 == 1);
 	bg.where(bg.y % 2 == 1);
 
 	Expr b2g_n, b2g_s, b2g_w, b2g_e, omega_n, omega_e, omega_s, omega_w, result;
@@ -86,7 +87,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 	RDom rg(2, input.width() - 4, 2, input.height() - 4);
 
-	rg.where(rg.x % 2 == 1);
+	rg.where(rg.x % 2 == 0);
 	rg.where(rg.y % 2 == 0);
 
 	Expr r2g_n, r2g_s, r2g_w, r2g_e;
@@ -122,7 +123,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 	RDom rb(1, input.width() - 2, 1, input.height() - 2);
 
-	rb.where(rb.x % 2 == 1);
+	rb.where(rb.x % 2 == 0);
 	rb.where(rb.y % 2 == 0);
 
 	Expr r2b_ne, r2b_se, r2b_sw, r2b_nw;
@@ -149,7 +150,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 	RDom br(1, input.width() - 2, 1, input.height() - 2);
 
-	br.where(br.x % 2 == 0);
+	br.where(br.x % 2 == 1);
 	br.where(br.y % 2 == 1);
 
 	Expr b2r_ne, b2r_se, b2r_sw, b2r_nw;
@@ -183,7 +184,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 	RDom g(2, input.width() - 4, 2, input.height() - 4);
 
-	g.where((g.x % 2 == 0 && g.y % 2 == 0) || (g.x % 2 == 1 && g.y % 2 == 1));
+	g.where((g.x % 2 == 1 && g.y % 2 == 0) || (g.x % 2 == 0 && g.y % 2 == 1));
 
 	Expr g_n, g_s, g_w, g_e;
 
@@ -385,7 +386,66 @@ Buffer<uint8_t> gamma_correction(Buffer<uint8_t> input)
 
 }
 
-//Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
-//{
-//   return NULL; 
-//}
+Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)
+{
+	//First find the brightest pixel
+
+	float max = -1, mag, max_r, max_g, max_b;
+	uint8_t offset_r, offset_g, offset_b;
+
+	Halide::Func demosaic("demosaic");
+	// demosaic.trace_stores();
+
+	Var x("x"), y("y"), c("c");
+	
+	// Halide::Expr value;
+
+	demosaic(x, y, c) = input(x, y, c);
+
+	//Red
+
+	RDom r(1, input.width() - 2, 1, input.height() - 2);
+
+	
+	r.where(r.x % 2 == 0);
+	r.where(r.y % 2 == 0);
+
+	demosaic(r.x, r.y, 1) = (input(r.x, r.y + 1, 1) / 4 + input(r.x, r.y - 1, 1) / 4 + input(r.x + 1, r.y, 1) / 4 + input(r.x - 1, r.y, 1) / 4);
+	demosaic(r.x, r.y, 2) = (input(r.x + 1, r.y + 1, 2) / 4 + input(r.x + 1, r.y - 1, 2) / 4 + input(r.x - 1, r.y + 1, 2) / 4 + input(r.x - 1, r.y - 1, 2) / 4);
+
+
+	//Blue
+
+	RDom b(1, input.width() - 2, 1, input.height() - 2);
+
+	b.where(b.x % 2 == 1);
+	b.where(b.y % 2 == 1);
+
+	demosaic(b.x, b.y, 0) = (input(b.x + 1, b.y + 1, 0) / 4 + input(b.x - 1, b.y + 1, 0) / 4 + input(b.x + 1, b.y - 1, 0) / 4 + input(b.x - 1, b.y - 1, 0) / 4);
+	demosaic(b.x, b.y, 1) = (input(b.x + 1, b.y, 1) / 4 + input(b.x, b.y + 1, 1) / 4 + input(b.x - 1, b.y, 1) / 4 + input(b.x, b.y - 1, 1) / 4);
+
+	//Green 01
+
+	RDom g1(1, input.width() - 2, 1, input.height() - 2);
+	g1.where(g1.x % 2 == 0);
+	g1.where(g1.y % 2 == 1);
+
+	demosaic(g1.x, g1.y, 0) = (input(g1.x, g1.y + 1, 0) / 2 + input(g1.x, g1.y - 1, 0) / 2);
+	demosaic(g1.x, g1.y, 2) = (input(g1.x + 1, g1.y, 2) / 2 + input(g1.x - 1, g1.y, 2) / 2);
+
+
+	//Green 02
+
+	RDom g2(1, input.width() - 2, 1, input.height() - 2);
+	g2.where(g2.x % 2 == 1);
+	g2.where(g2.y % 2 == 0);
+
+	demosaic(g2.x, g2.y, 0) = (input(g2.x + 1, g2.y, 0) / 2 + input(g2.x - 1, g2.y, 0) / 2);
+	demosaic(g2.x, g2.y, 2) = (input(g2.x, g2.y + 1, 2) / 2 + input(g2.x, g2.y - 1, 2) / 2);
+
+	Halide::Buffer<uint8_t> output =
+        demosaic.realize(input.width(), input.height(), input.channels());
+
+
+	return output;
+}
