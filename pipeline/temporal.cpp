@@ -35,21 +35,19 @@ int main(int argc, char** argv)
     get_input();
     load_halide_functions(); 
     initiate_neighbors();
-    propagate_neighbors();
-    for(int y = 0; y < 7; ++y)
-       for(int x = 0; x < 7; ++x) {
-           cout<<"y "<<y<<" x "<<x<<endl;
-           print_neighbors(neighbors_h[y][x]);
-       }
     
-    random_search();
+    //for(int y = 0; y < 7; ++y)
+    //   for(int x = 0; x < 7; ++x) {
+    //       cout<<"y "<<y<<" x "<<x<<endl;
+    //       print_neighbors(neighbors_h[y][x]);
+    //   }
     
-    for(int y = 0; y < 7; ++y)
-       for(int x = 0; x < 7; ++x) {
-           cout<<"y "<<y<<" x "<<x<<endl;
-           print_neighbors(neighbors_h[y][x]);
+    for(int i = 0; i < 4; i++) {
+        propagate_neighbors();
+        random_search();
     }
 
+    
     t = clock() - t;
     cout<<(float)t/CLOCKS_PER_SEC<<" seconds"<<endl;
 }
@@ -331,8 +329,8 @@ short calculate_new_ssd(short x, short y, short offset_x,
 }
 
 
-void random_search() {
-    
+void random_search() 
+{
     int M = min(log(width / 3), (double)K);    
     cout<<"M "<<M<<endl;
     for(int y = 0; y < height; ++y) {
@@ -361,7 +359,8 @@ void random_search() {
             sort_neighbors(neighbors_h[y][x]);
             for(vector<vector<short>*>::iterator it = neighbors_h[y][x]->begin(); 
                 it != neighbors_h[y][x]->end(); ++it) {
-                cout<<"ssd "<<(*it)->at(0)<<" offset_x "<<(*it)->at(1)<<" offset_y "<<(*it)->at(2)<<endl;         
+                cout<<"ssd "<<(*it)->at(0)<<" offset_x "<<(*it)->at(1)<<" offset_y "
+                    <<(*it)->at(2)<<endl;         
             }
         }
     } 
