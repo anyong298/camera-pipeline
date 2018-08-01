@@ -2,6 +2,11 @@
 #include<time.h>
 #include<vector>
 #include "temporal.h"
+#include "opencv2/highgui.hpp"
+#include "optical_flow.h"
+#include <iostream>
+#include <ctype.h>
+#include "optical_flow.h"
 const short width = 50;
 const short height = 50;
 const short H = 5;            
@@ -15,13 +20,15 @@ int main(int argc, char** argv)
     for(short i = -H; i <= H; i++) {
         load_halide_functions(current_frame + i);
         initiate_neighbors(current_frame + i);
-        interleave_propagate_and_random_search(current_frame + i);
-    
+        interleave_propagate_and_random_search(current_frame + i); 
     for(short y = 0; y < height; y++)
         for(short x = 0; x < width; x++) {
-            cout<<"printing neighbors "<<current_frame + i << " "<<x<<" "<<y<<endl;
-            print_neighbors(get_neighbors(x, y));
-            //aknn_across_frames[y][x]->push_back(get_neighbors(x, y));
+            Point2f point;
+            point = Point2f(x, y);
+            //cout<<"printing neighbors "<<current_frame + i << " "<<x<<" "<<y<<endl;
+            //print_neighbors(get_neighbors(x, y));
+            cout<<"printing optical flow offsets"<<endl;
+            cout<<get_offset(point, current_frame, i)<<endl;
         }
     }
     

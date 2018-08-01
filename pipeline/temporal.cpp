@@ -231,9 +231,6 @@ void propagate_scanline(short frame, short x, short y)
     sort_neighbors(neighbors_h[y][x]);
 }
 
-
-
-
 void propagate_reverse_scanline(short frame, short x, short y)
 {
     short offset_x, offset_y, offset_ssd;
@@ -260,9 +257,6 @@ void propagate_reverse_scanline(short frame, short x, short y)
     }
     sort_neighbors(neighbors_h[y][x]);
 }
-
-
-
 
 short calculate_new_ssd(short frame, short x, short y, short offset_x, 
                         short offset_y, short offset_ssd, char direction)
