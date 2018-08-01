@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <vector>
 #include <list>
-#include <time.h>
 #include "Halide.h"
 #include "halide_image_io.h"
 #include "temporal.h"
@@ -19,38 +18,13 @@ using namespace Halide::ConciseCasts;
 const int width = 50;
 const int height = 50;
 const int n_channels = 3;
-const int n_frames = 5;
+const int n_frames = 11;
 
 typedef vector<short>* coord_t;
 typedef vector<short>* coord_ssd_t;
 typedef vector<coord_ssd_t>* heap_t;
 
 heap_t neighbors_h[height][width];
-
-
-int main(int argc, char** argv) 
-{
-
-    clock_t t = clock();
-    get_input();
-    load_halide_functions(); 
-    initiate_neighbors();
-    
-    //for(int y = 0; y < 7; ++y)
-    //   for(int x = 0; x < 7; ++x) {
-    //       cout<<"y "<<y<<" x "<<x<<endl;
-    //       print_neighbors(neighbors_h[y][x]);
-    //   }
-    
-    for(int i = 0; i < 4; i++) {
-        propagate_neighbors();
-        random_search();
-    }
-
-    
-    t = clock() - t;
-    cout<<(float)t/CLOCKS_PER_SEC<<" seconds"<<endl;
-}
 
 Buffer<uint8_t> input[n_frames];
 
@@ -66,13 +40,13 @@ void get_input()
 }
 
 
-Func D, I, Dx_right_in, Dx_left_in, Dy_up_in, Dy_down_in, 
-        Dx_right_out, Dx_left_out, Dy_up_out, Dy_down_out;
+Func D[n_frames], I[n_frames], Dx_right_in[n_frames], Dx_left_in[n_frames], Dy_up_in[n_frames], Dy_down_in[n_frames], 
+        Dx_right_out[n_frames], Dx_left_out[n_frames], Dy_up_out[n_frames], Dy_down_out[n_frames];
 
 
-void load_halide_functions() 
+void load_halide_functions(short frame) 
 {
-        const int s = 10;
+    const int s = 10;
     Var x, y, x_i, y_i, c, i, xo, yo, xi, yi;
   
     RDom u(-s, s, -s, s);
@@ -89,54 +63,54 @@ void load_halide_functions()
     RDom dy_down_out(-s, s, s, s + 1);
     RDom dy_down_in(-s, s, s - 1, s);
     
-    I(x, y, c) = input[0](clamp(x, s, width - s), clamp(y, s, height - s), c);   
+    I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);   
     
-    D(x, y, x_i, y_i, c) = i16(sum(pow((I(x + u.x, y + u.y, c) 
-                            - I(x_i + u.x, y_i + u.y, c)), 2)));
+    D[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
+                            - I[frame](x_i + u.x, y_i + u.y, c)), 2)));
     
-    Dx_left_in(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dx_left_in.x, y + dx_left_in.y, c) 
-                                    - I(x_i + dx_left_in.x, y_i + dx_left_in.y, c)), 2)));
+    Dx_left_in[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dx_left_in.x, y + dx_left_in.y, c) 
+                                    - I[frame](x_i + dx_left_in.x, y_i + dx_left_in.y, c)), 2)));
     
-    Dx_right_in(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dx_right_in.x, y + dx_right_in.y, c) 
-                                    - I(x_i + dx_right_in.x, y_i + dx_right_in.y, c)), 2)));
+    Dx_right_in[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dx_right_in.x, y + dx_right_in.y, c) 
+                        - I[frame](x_i + dx_right_in.x, y_i + dx_right_in.y, c)), 2)));
     
-    Dy_up_in(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dy_up_in.x, y + dy_up_in.y, c) 
-                                    - I(x_i + dy_up_in.x, y_i + dy_up_in.y, c)), 2)));
+    Dy_up_in[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dy_up_in.x, y + dy_up_in.y, c) 
+                                    - I[frame](x_i + dy_up_in.x, y_i + dy_up_in.y, c)), 2)));
     
-    Dy_down_in(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dy_down_in.x, y + dy_down_in.y, c) 
-                                    - I(x_i + dy_down_in.x, y_i + dy_down_in.y, c)), 2)));
+    Dy_down_in[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dy_down_in.x, y + dy_down_in.y, c) 
+                                    - I[frame](x_i + dy_down_in.x, y_i + dy_down_in.y, c)), 2)));
     
-    Dx_left_out(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dx_left_out.x, y + dx_left_out.y, c) 
-                                    - I(x_i + dx_left_out.x, y_i + dx_left_out.y, c)), 2)));
+    Dx_left_out[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dx_left_out.x, y + dx_left_out.y, c) 
+                                    - I[frame](x_i + dx_left_out.x, y_i + dx_left_out.y, c)), 2)));
     
-    Dx_right_out(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dx_right_out.x, y + dx_right_out.y, c) 
-                                    - I(x_i + dx_right_out.x, y_i + dx_right_out.y, c)), 2)));
+    Dx_right_out[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dx_right_out.x, y + dx_right_out.y, c) 
+                                    - I[frame](x_i + dx_right_out.x, y_i + dx_right_out.y, c)), 2)));
     
-    Dy_up_out(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dy_up_out.x, y + dy_up_out.y, c) 
-                                    - I(x_i + dy_up_out.x, y_i + dy_up_out.y, c)), 2)));
+    Dy_up_out[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dy_up_out.x, y + dy_up_out.y, c) 
+                                    - I[frame](x_i + dy_up_out.x, y_i + dy_up_out.y, c)), 2)));
     
-    Dy_down_out(x, y, x_i, y_i, c) = i16(sum(pow((I(x + dy_down_out.x, y + dy_down_out.y, c) 
-                                    - I(x_i + dy_down_out.x, y_i + dy_down_out.y, c)), 2)));
+    Dy_down_out[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + dy_down_out.x, y + dy_down_out.y, c) 
+                                    - I[frame](x_i + dy_down_out.x, y_i + dy_down_out.y, c)), 2)));
 }
 
 
-void initiate_neighbors() 
+void initiate_neighbors(short frame) 
 {
     srand(17);
     for(short y = 0; y < height; y++)
         for(short x = 0; x < width; x++) {
             vector<vector<short>*>* neighbors;
             neighbors = new vector<vector<short>*>;
-            generate_random_offsets_and_ssds(x, y, neighbors); 
+            generate_random_offsets_and_ssds(frame, x, y, neighbors); 
             neighbors_h[y][x] = neighbors;
          }
-    cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl;
+    cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
 }
 
-void generate_random_offsets_and_ssds(short x, short y, vector<vector<short>*>* neighbors)
+void generate_random_offsets_and_ssds(short frame, short x, short y, vector<vector<short>*>* neighbors)
 {
     for(ushort i = 0; i < K; i++) {
-        vector<short>* ssd_and_offset = get_neighbor_ssd(x, y);
+        vector<short>* ssd_and_offset = get_neighbor_ssd(frame, x, y);
         neighbors->push_back(ssd_and_offset);    
     } 
     sort_neighbors(neighbors);
@@ -145,14 +119,14 @@ void generate_random_offsets_and_ssds(short x, short y, vector<vector<short>*>* 
     //    print_neighbors(neighbors);    
 }
 
-vector<short>* get_neighbor_ssd(short x, short y) 
+vector<short>* get_neighbor_ssd(short frame, short x, short y) 
 {
     vector<short>* coord = new vector<short>;
     Buffer<short> pix(1, 1, 1, 1, 3);
     short offset_x = get_random_x();
     short offset_y = get_random_y(); 
     pix.set_min(x, y, x + offset_x, y + offset_y);   
-    D.realize(pix);
+    D[frame].realize(pix);
     short ssd = pix(x, y, x + offset_x, y + offset_y, 0);
     coord->push_back(ssd);
     //cout<<"ssd "<<ssd; 
@@ -213,21 +187,21 @@ float box_muller_trans(float x)
 
 
 
-void propagate_neighbors() 
+void propagate_neighbors(short frame) 
 {
     for(short y = 1; y < height; ++y)     
         for(short x = 1; x < width; ++x) {
-            propagate_scanline(x, y);
+            propagate_scanline(frame, x, y);
         }
    
     for(short y = height - 2; y >= 0; --y)     
         for(short x = width - 2; x >= 0; --x) {
-            propagate_reverse_scanline(x, y);
+            propagate_reverse_scanline(frame, x, y);
         }
 } 
 
 
-void propagate_scanline(short x, short y)
+void propagate_scanline(short frame, short x, short y)
 {
     short offset_x, offset_y, offset_ssd; 
     
@@ -237,7 +211,7 @@ void propagate_scanline(short x, short y)
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2);         
-        new_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'r'));
+        new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'r'));
         new_neighbor->push_back((short) offset_x + 1);
         new_neighbor->push_back(offset_y);
         neighbors_h[y][x]->push_back(new_neighbor);
@@ -249,7 +223,7 @@ void propagate_scanline(short x, short y)
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2); 
-        new_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'd'));
+        new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'd'));
         new_neighbor->push_back(offset_x);
         new_neighbor->push_back((short) offset_y + 1);
         neighbors_h[y][x]->push_back(new_neighbor);
@@ -260,7 +234,7 @@ void propagate_scanline(short x, short y)
 
 
 
-void propagate_reverse_scanline(short x, short y)
+void propagate_reverse_scanline(short frame, short x, short y)
 {
     short offset_x, offset_y, offset_ssd;
     for(vector<vector<short>*>::iterator it = neighbors_h[y][x + 1]->begin(); 
@@ -269,7 +243,7 @@ void propagate_reverse_scanline(short x, short y)
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2); 
-        new_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'l')); 
+        new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'l')); 
         new_neighbor->push_back((short) offset_x - 1);
         new_neighbor->push_back(offset_y);
     }
@@ -280,7 +254,7 @@ void propagate_reverse_scanline(short x, short y)
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2);
-        new_neighbor->push_back(calculate_new_ssd(x, y, offset_x, offset_y, offset_ssd, 'u')); 
+        new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'u')); 
         new_neighbor->push_back(offset_x);
         new_neighbor->push_back((short)offset_y - 1);
     }
@@ -290,7 +264,7 @@ void propagate_reverse_scanline(short x, short y)
 
 
 
-short calculate_new_ssd(short x, short y, short offset_x, 
+short calculate_new_ssd(short frame, short x, short y, short offset_x, 
                         short offset_y, short offset_ssd, char direction)
 {
     Buffer<short> add_b(1, 1, 1, 1, 3);
@@ -302,23 +276,23 @@ short calculate_new_ssd(short x, short y, short offset_x,
     switch(direction) {
         
         case 'r':
-            Dx_right_out.realize(add_b); 
-            Dx_left_in.realize(subtract_b);
+            Dx_right_out[frame].realize(add_b); 
+            Dx_left_in[frame].realize(subtract_b);
             break;
 
         case 'd':
-            Dy_down_out.realize(add_b);
-            Dy_up_in.realize(subtract_b);
+            Dy_down_out[frame].realize(add_b);
+            Dy_up_in[frame].realize(subtract_b);
             break;
 
         case 'l':
-            Dx_left_out.realize(add_b); 
-            Dx_right_in.realize(subtract_b);
+            Dx_left_out[frame].realize(add_b); 
+            Dx_right_in[frame].realize(subtract_b);
             break;
 
         case 'u':
-            Dy_up_out.realize(add_b); 
-            Dy_down_in.realize(subtract_b);
+            Dy_up_out[frame].realize(add_b); 
+            Dy_down_in[frame].realize(subtract_b);
             break;
  
         default:
@@ -329,7 +303,7 @@ short calculate_new_ssd(short x, short y, short offset_x,
 }
 
 
-void random_search() 
+void random_search(short frame) 
 {
     int M = min(log(width / 3), (double)K);    
     cout<<"M "<<M<<endl;
@@ -343,7 +317,7 @@ void random_search()
                 Buffer<short> pix(1, 1, 1, 1, 3);
 
                 pix.set_min(x, y, x + offset_x, y + offset_y, 0);   
-                D.realize(pix);
+                D[frame].realize(pix);
 
                 short ssd = pix(x, y, x + offset_x, y + offset_y, 0);
             
@@ -351,19 +325,22 @@ void random_search()
                 random_guess->push_back(offset_x);
                 random_guess->push_back(offset_y);
 
-                cout<<"ssd "<<ssd<<" offset_x "<<offset_x<<" offset_y "<<offset_y<<endl;
+                //cout<<"ssd "<<ssd<<" offset_x "<<offset_x<<" offset_y "<<offset_y<<endl;
 
                 neighbors_h[y][x]->push_back(random_guess);
             }
             
             sort_neighbors(neighbors_h[y][x]);
-            for(vector<vector<short>*>::iterator it = neighbors_h[y][x]->begin(); 
-                it != neighbors_h[y][x]->end(); ++it) {
-                cout<<"ssd "<<(*it)->at(0)<<" offset_x "<<(*it)->at(1)<<" offset_y "
-                    <<(*it)->at(2)<<endl;         
-            }
+            //for(vector<vector<short>*>::iterator it = neighbors_h[y][x]->begin(); 
+            //    it != neighbors_h[y][x]->end(); ++it) {
+            //    cout<<"ssd "<<(*it)->at(0)<<" offset_x "<<(*it)->at(1)<<" offset_y "
+            //        <<(*it)->at(2)<<endl;         
+            //}
         }
     } 
-            
+}
 
+vector<vector<short>*>* get_neighbors(short x, short y)
+{
+    return neighbors_h[x][y];
 }

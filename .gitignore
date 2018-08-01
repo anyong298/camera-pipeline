@@ -10,3 +10,4 @@ pipeline/ssd.cpp
 opencv_contrib
 opencv
 flir-util
+*.swp

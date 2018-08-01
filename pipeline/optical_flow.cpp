@@ -10,17 +10,17 @@
 using namespace cv;
 using namespace std;
 
-int main(int argc, char** argv)
-{
-    //input is a point and an integer which specifies the frame that we want. 
-    
-    Point2f point;
-    point = Point2f(atof(argv[1]), atof(argv[2]));
-    int current_frame = 50;
-    int next_frame_offset = 1;
-    vector<Point2f> z = get_offset(point, current_frame, next_frame_offset);
-    cout<<"z "<<z<<endl;
-}
+//int main(int argc, char** argv)
+//{
+//    //input is a point and an integer which specifies the frame that we want. 
+//    
+//    Point2f point;
+//    point = Point2f(atof(argv[1]), atof(argv[2]));
+//    int current_frame = 50;
+//    int next_frame_offset = 1;
+//    vector<Point2f> z = get_offset(point, current_frame, next_frame_offset);
+//    cout<<"z "<<z<<endl;
+//}
 
 
 vector<Point2f> get_offset(Point2f point, int current_frame, int next_frame_offset)

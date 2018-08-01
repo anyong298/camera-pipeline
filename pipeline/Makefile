@@ -1,5 +1,5 @@
-temporal: temporal.cpp heap.cpp
-	g++ temporal.cpp heap.cpp -g -I ../include -I ../tools -L ../bin -lHalide `libpng-config --cflags --ldflags` -ljpeg -lpthread -ldl -o executables/temporal -std=c++11 -Wall -Werror
+temporal: temporal.cpp heap.cpp aknn.cpp optical_flow.cpp
+	g++ temporal.cpp heap.cpp aknn.cpp optical_flow.cpp -g -I ../include -I ../tools -L ../bin -lHalide `libpng-config --cflags --ldflags` -ljpeg -lpthread -ldl -o executables/temporal -std=c++11 `pkg-config opencv --cflags --libs` -Wall -Werror
 
 
 ssd: ssd.cpp
