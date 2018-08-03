@@ -8,7 +8,7 @@
 #include "Halide.h"
 #define OBR_HEIGHT 10
 using namespace Halide;
-using namespace Tools;
+//using namespace Halide::Tools;
 using namespace ConciseCasts;
 
 
