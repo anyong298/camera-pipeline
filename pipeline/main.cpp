@@ -14,7 +14,7 @@ using namespace Halide::ConciseCasts;
 int main(int argc, char** argv)
 {
     Buffer<uint8_t> stage1 = load_image("images/inputs/" + std::string(argv[1]));
-    Buffer<uint8_t> stage2 = (stage1);
+    Buffer<uint8_t> stage2 = demosaic_naive(stage1);
     Buffer<uint8_t> stage3 = denoise_no_approx(stage2);    
     //Buffer<uint8_t> stage4 = white_balance(stage3, (char*)"1", (char*)"2", (char*)"4");
     //Buffer<uint8_t> final_stage = gamma_correction(stage3);     

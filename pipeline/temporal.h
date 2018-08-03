@@ -34,6 +34,14 @@ short calculate_new_ssd(short frame, short x, short y, short x_i, short y_i, sho
 void maintain_size(vector<vector<short>*>* vector);
 vector<vector<short>*>* get_neighbors(short x, short y);
 
-//in aknn.cpp
+//aknn.cpp
 void interleave_propagate_and_random_search(short frame);
 
+//optical_flow.cpp
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
+
+using namespace cv;
+vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset);

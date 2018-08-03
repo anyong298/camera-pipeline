@@ -62,7 +62,7 @@ void load_halide_functions(short frame)
     
     RDom dy_down_out(-s, s, s, s + 1);
     RDom dy_down_in(-s, s, s - 1, s);
-    
+    cout<<"loading halide input for frame "<<frame<<endl; 
     I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);   
     
     D[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 

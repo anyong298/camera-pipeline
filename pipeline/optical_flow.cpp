@@ -2,7 +2,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
-#include "optical_flow.h"
+#include "temporal.h"
 #include <iostream>
 #include <ctype.h>
 #include <vector>
@@ -23,13 +23,15 @@ using namespace std;
 //}
 
 
-vector<Point2f> get_offset(Point2f point, int current_frame, int next_frame_offset)
+vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset)
 {
     TermCriteria termcrit(TermCriteria::COUNT|TermCriteria::EPS, 20, 0.03);
     Size winSize(31, 31);
     Mat gray1, gray2, frame1, frame2;
     vector<uchar> status;
     vector<float> err;
+    cout<<"current frame "<<current_frame<<endl;
+    cout<<"other frame "<<current_frame + next_frame_offset<<endl;  
     frame1 = imread("./frames/" + to_string(current_frame) + ".png", 1);
     frame2 = imread("./frames/" + to_string(current_frame + next_frame_offset) + ".png", 1);
     
