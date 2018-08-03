@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ctype.h>
 #include "optical_flow.h"
+
 const short width = 50;
 const short height = 50;
 const short H = 5;            
