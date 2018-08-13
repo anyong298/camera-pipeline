@@ -4,6 +4,7 @@ const uint K = 10;
 const short H = 5;
 const short height = 50;
 const short width = 50;
+const ushort s = 10; 
 void get_input();
 float box_muller_trans(float x);
 int i_parent(int i);
@@ -48,4 +49,9 @@ void interleave_propagate_and_random_search(short frame, vector<vector<short>*>*
 
 using namespace cv;
 vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset);
-void non_local_means_estimate();
+float non_local_means_estimate(short x, short y, short frame);
+float normalization_factor(short frame);
+float noise_level_factor();
+float calc_weighted_ssd(short frame, short i, short j);
+float calc_input(short frame, short offset, short i, short j);
+void load_halide_functions_nlm(short frame, short i, short j);

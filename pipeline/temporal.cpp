@@ -34,13 +34,13 @@ void get_input()
 }
 
 
-Func D[n_frames], I[n_frames], Dx_right_in[n_frames], Dx_left_in[n_frames], Dy_up_in[n_frames], Dy_down_in[n_frames], 
-        Dx_right_out[n_frames], Dx_left_out[n_frames], Dy_up_out[n_frames], Dy_down_out[n_frames];
+Func D[n_frames], I[n_frames], Dx_right_in[n_frames], Dx_left_in[n_frames], 
+     Dy_up_in[n_frames], Dy_down_in[n_frames], Dx_right_out[n_frames], Dx_left_out[n_frames], 
+     Dy_up_out[n_frames], Dy_down_out[n_frames], weighted_ssd[n_frames][n_frames][n_frames];
 
 
 void load_halide_functions(short frame) 
 {
-    const int s = 10;
     Var x, y, x_i, y_i, c, i, xo, yo, xi, yi;
   
     RDom u(-s, s, -s, s);
@@ -57,7 +57,7 @@ void load_halide_functions(short frame)
     RDom dy_down_out(-s, s, s, s + 1);
     RDom dy_down_in(-s, s, s - 1, s);
     //cout<<"loading halide input for frame "<<frame<<endl; 
-    I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);   
+    I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);  
     
     D[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
                             - I[frame](x_i + u.x, y_i + u.y, c)), 2)));
@@ -87,6 +87,26 @@ void load_halide_functions(short frame)
                                     - I[frame](x_i + dy_down_out.x, y_i + dy_down_out.y, c)), 2)));
 }
 
+short weighted_ssd_neighbor_counter = 0;
+void load_halide_functions_nlm(short frame, short i, short j)
+{
+    Var x, y, x_i, y_i, c;
+    RDom u(-s, s, -s, s);
+    weighted_ssd[frame][i + H][j](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
+                    - I[frame + i](x_i + u.x, y_i + u.y, c)), 2) 
+                    * exp(-(pow(u.x, 2) + pow(u.y, 2)) / 
+                        (float)(2 * pow(s / 2, 2)))));
+}
+
+float calc_weighted_ssd(short frame, short i, short j)
+{
+    load_halide_functions_nlm(frame, i, j);
+    Buffer<int16_t> buff(1, 1, 1, 1, 3);
+    buff.set_min(x, y, , 10, 0);
+    
+    weighted_ssd[frame][i + H][j].realize(buff);
+    return buff(x, y, 10, 10, 0);
+}
 
 void initiate_neighbors(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
 {
