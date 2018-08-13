@@ -15,16 +15,10 @@ using namespace std;
 using namespace Halide;
 using namespace Halide::ConciseCasts;
 
-const int width = 50;
-const int height = 50;
 const int n_channels = 3;
 const int n_frames = 11;
 
-typedef vector<short>* coord_t;
-typedef vector<short>* coord_ssd_t;
-typedef vector<coord_ssd_t>* heap_t;
 
-heap_t neighbors_h[height][width];
 
 Buffer<uint8_t> input[n_frames];
 
@@ -62,7 +56,7 @@ void load_halide_functions(short frame)
     
     RDom dy_down_out(-s, s, s, s + 1);
     RDom dy_down_in(-s, s, s - 1, s);
-    cout<<"loading halide input for frame "<<frame<<endl; 
+    //cout<<"loading halide input for frame "<<frame<<endl; 
     I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);   
     
     D[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
@@ -94,7 +88,7 @@ void load_halide_functions(short frame)
 }
 
 
-void initiate_neighbors(short frame) 
+void initiate_neighbors(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
 {
     srand(17);
     for(short y = 0; y < height; y++)
@@ -104,7 +98,7 @@ void initiate_neighbors(short frame)
             generate_random_offsets_and_ssds(frame, x, y, neighbors); 
             neighbors_h[y][x] = neighbors;
          }
-    cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
+    //cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
 }
 
 void generate_random_offsets_and_ssds(short frame, short x, short y, vector<vector<short>*>* neighbors)
@@ -187,21 +181,21 @@ float box_muller_trans(float x)
 
 
 
-void propagate_neighbors(short frame) 
+void propagate_neighbors(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
 {
     for(short y = 1; y < height; ++y)     
         for(short x = 1; x < width; ++x) {
-            propagate_scanline(frame, x, y);
+            propagate_scanline(frame, x, y, neighbors_h);
         }
    
     for(short y = height - 2; y >= 0; --y)     
         for(short x = width - 2; x >= 0; --x) {
-            propagate_reverse_scanline(frame, x, y);
+            propagate_reverse_scanline(frame, x, y, neighbors_h);
         }
 } 
 
 
-void propagate_scanline(short frame, short x, short y)
+void propagate_scanline(short frame, short x, short y, vector<vector<short>*>* neighbors_h[height][width])
 {
     short offset_x, offset_y, offset_ssd; 
     
@@ -219,7 +213,7 @@ void propagate_scanline(short frame, short x, short y)
 
     for(vector<vector<short>*>::iterator it = neighbors_h[y - 1][x]->begin(); 
         it != neighbors_h[y - 1][x]->end(); ++it) {
-        coord_ssd_t new_neighbor = new vector<short>;
+        vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2); 
@@ -231,12 +225,12 @@ void propagate_scanline(short frame, short x, short y)
     sort_neighbors(neighbors_h[y][x]);
 }
 
-void propagate_reverse_scanline(short frame, short x, short y)
+void propagate_reverse_scanline(short frame, short x, short y, vector<vector<short>*>* neighbors_h[height][width])
 {
     short offset_x, offset_y, offset_ssd;
     for(vector<vector<short>*>::iterator it = neighbors_h[y][x + 1]->begin(); 
         it != neighbors_h[y][x + 1]->end(); ++it) {
-        coord_ssd_t new_neighbor = new vector<short>;
+        vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2); 
@@ -247,7 +241,7 @@ void propagate_reverse_scanline(short frame, short x, short y)
 
     for(vector<vector<short>*>::iterator it = neighbors_h[y + 1][x]->begin(); 
         it != neighbors_h[y + 1][x]->end(); ++it) {
-        coord_ssd_t new_neighbor = new vector<short>;
+        vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
         offset_y = (*it)->at(2);
@@ -297,10 +291,10 @@ short calculate_new_ssd(short frame, short x, short y, short offset_x,
 }
 
 
-void random_search(short frame) 
+void random_search(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
 {
     int M = min(log(width / 3), (double)K);    
-    cout<<"M "<<M<<endl;
+    //cout<<"M "<<M<<endl;
     for(int y = 0; y < height; ++y) {
         for(int x = 0; x < width; ++x) {     
             for(int i = 0; i < M; ++i) {
@@ -334,7 +328,7 @@ void random_search(short frame)
     } 
 }
 
-vector<vector<short>*>* get_neighbors(short x, short y)
+vector<vector<short>*>* get_neighbors(short x, short y, vector<vector<short>*>* neighbors_h[height][width])
 {
     return neighbors_h[x][y];
 }

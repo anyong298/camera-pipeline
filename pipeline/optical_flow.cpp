@@ -30,8 +30,8 @@ vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_
     Mat gray1, gray2, frame1, frame2;
     vector<uchar> status;
     vector<float> err;
-    cout<<"current frame "<<current_frame<<endl;
-    cout<<"other frame "<<current_frame + next_frame_offset<<endl;  
+    //cout<<"current frame "<<current_frame<<endl;
+    //cout<<"other frame "<<current_frame + next_frame_offset<<endl;  
     frame1 = imread("./frames/" + to_string(current_frame) + ".png", 1);
     frame2 = imread("./frames/" + to_string(current_frame + next_frame_offset) + ".png", 1);
     
