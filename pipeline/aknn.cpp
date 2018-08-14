@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     aknn_across_frames[y][x] = aknn_across_frames_point;
     t = clock() - t;
     cout<<"testing non_local_means_estimate"<<endl;
-    non_local_means_estimate(point, current_frame);
+    non_local_means_estimate(current_frame, point);
     cout<<(float)t/CLOCKS_PER_SEC<<" seconds"<<endl;
 }
 
@@ -57,17 +57,24 @@ void interleave_propagate_and_random_search(short current_frame, vector<vector<s
     }
 }
 
-float non_local_means_estimate(vector<short>* patch_coord_current_frame, short current_frame)
+float non_local_means_estimate(short current_frame, vector<short>* patch_coord_current_frame)
 {
     
     float nlm_estimate_unweighted = 0;
     float gamma = 0.9;
-    for(short other_frame = current_frame - H; other_frame <= current_frame + H; other_frame++) {
+    short x = patch_coord_current_frame->at(0);
+    short y = patch_coord_current_frame->at(1);
+    for(short other_frame = current_frame - H; other_frame <= current_frame + H; 
+            other_frame++) {
         float weight = 0;
         for(ushort neighbor = 1; neighbor <= K; neighbor++) {
-            vector<short>* patch_coord_offset_other_frame = aknn_across_frames[coord->at(0)][coord->at(1)]->at(other_frame - 1)->at(neighbor-1);
-            weight += calc_input(patch_coord_current_frame, current_frame, 
-                    other_frame, patch_coord_other_frame) * 
+            vector<short>* patch_coord_offset_other_frame = 
+                aknn_across_frames[y][x]->at(other_frame - 1)->at(neighbor - 1);
+            vector<short>* patch_coord_other_frame = new vector<short>;
+            patch_coord_other_frame->push_back(x + patch_coord_offset_other_frame->at(0));
+            patch_coord_other_frame->push_back(x + patch_coord_offset_other_frame->at(1));
+            weight += calc_input(current_frame, other_frame, 
+                    patch_coord_current_frame, patch_coord_other_frame) * 
                 exp(-calc_weighted_ssd(current_frame, other_frame, 
                             patch_coord_current_frame, patch_coord_other_frame) / 
                         (2 * pow(noise_level_factor(), 2))); 
@@ -100,7 +107,7 @@ float noise_level_factor()
     return 6;
 }
 
-float calc_input(vector<short>* point, short current_frame, short other_frame, short neighbor)
+float calc_input(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame)
 {
     return 10;
 }

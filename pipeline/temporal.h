@@ -49,11 +49,11 @@ void interleave_propagate_and_random_search(short frame, vector<vector<short>*>*
 
 using namespace cv;
 vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset);
-float non_local_means_estimate(vector<short>* point, short frame);
+float non_local_means_estimate(short current_frame, vector<short>* patch_coord_current_frame);
 float normalization_factor(short frame);
 float noise_level_factor();
-float calc_weighted_ssd(short frame, short i, short j);
-float calc_input(short frame, short offset, short i, short j);
+float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
+float calc_input(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
 void load_halide_functions_nlm(short current_frame, short other_frame, 
         vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
 
