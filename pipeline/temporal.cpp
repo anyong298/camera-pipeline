@@ -87,44 +87,24 @@ void load_halide_functions(short frame)
                                     - I[frame](x_i + dy_down_out.x, y_i + dy_down_out.y, c)), 2)));
 }
 
-short weighted_ssd_neighbor_counter = 0;
-void load_halide_functions_nlm(short frame, short i, short j)
-{
-    Var x, y, x_i, y_i, c;
-    RDom u(-s, s, -s, s);
-    weighted_ssd[frame][i + H][j](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
-                    - I[frame + i](x_i + u.x, y_i + u.y, c)), 2) 
-                    * exp(-(pow(u.x, 2) + pow(u.y, 2)) / 
-                        (float)(2 * pow(s / 2, 2)))));
-}
 
-float calc_weighted_ssd(short frame, short i, short j)
-{
-    load_halide_functions_nlm(frame, i, j);
-    Buffer<int16_t> buff(1, 1, 1, 1, 3);
-    buff.set_min(x, y, , 10, 0);
-    
-    weighted_ssd[frame][i + H][j].realize(buff);
-    return buff(x, y, 10, 10, 0);
-}
-
-void initiate_neighbors(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
+void initiate_neighbors(short current_frame, vector<vector<short>*>* neighbors_h[height][width]) 
 {
     srand(17);
     for(short y = 0; y < height; y++)
         for(short x = 0; x < width; x++) {
             vector<vector<short>*>* neighbors;
             neighbors = new vector<vector<short>*>;
-            generate_random_offsets_and_ssds(frame, x, y, neighbors); 
+            generate_random_offsets_and_ssds(current_frame, x, y, neighbors); 
             neighbors_h[y][x] = neighbors;
          }
     //cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
 }
 
-void generate_random_offsets_and_ssds(short frame, short x, short y, vector<vector<short>*>* neighbors)
+void generate_random_offsets_and_ssds(short current_frame, vector<short>* point, vector<vector<short>*>* neighbors)
 {
     for(ushort i = 0; i < K; i++) {
-        vector<short>* ssd_and_offset = get_neighbor_ssd(frame, x, y);
+        vector<short>* ssd_and_offset = get_neighbor_ssd(current_frame, point);
         neighbors->push_back(ssd_and_offset);    
     } 
     sort_neighbors(neighbors);
@@ -133,14 +113,16 @@ void generate_random_offsets_and_ssds(short frame, short x, short y, vector<vect
     //    print_neighbors(neighbors);    
 }
 
-vector<short>* get_neighbor_ssd(short frame, short x, short y) 
+vector<short>* get_neighbor_ssd(short current_frame, vector<short>* point) 
 {
     vector<short>* coord = new vector<short>;
     Buffer<short> pix(1, 1, 1, 1, 3);
     short offset_x = get_random_x();
     short offset_y = get_random_y(); 
+    short x = point->at(0);
+    short y = point->at(1);
     pix.set_min(x, y, x + offset_x, y + offset_y);   
-    D[frame].realize(pix);
+    D[current_frame].realize(pix);
     short ssd = pix(x, y, x + offset_x, y + offset_y, 0);
     coord->push_back(ssd);
     //cout<<"ssd "<<ssd; 
@@ -352,3 +334,31 @@ vector<vector<short>*>* get_neighbors(short x, short y, vector<vector<short>*>* 
 {
     return neighbors_h[x][y];
 }
+
+
+float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame)
+{
+    load_halide_functions_nlm(current_frame, other_frame, 
+            patch_coord_current_frame, patch_coord_other_frame);
+    Buffer<int16_t> weighted_ssd_buff(1, 1, 1, 1, 3);
+    short x = patch_coord_current_frame->at(0);
+    short y = patch_coord_current_frame->at(1);
+    short x_ = patch_coord_other_frame->at(0);
+    short y_ = patch_coord_other_frame->at(1);
+    weighted_ssd_buff.set_min(x, y, x_, y_, 0);    
+    weighted_ssd[current_frame][other_frame + H][neighbor].realize(weighted_ssd_buff);
+    return weighted_ssd_buff(x, y, x_, y_, 0);
+}
+
+short weighted_ssd_neighbor_counter = 0;
+void load_halide_functions_nlm(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame)
+{
+    Var x, y, x_i, y_i, c;
+    RDom u(-s, s, -s, s);
+    weighted_ssd[current_frame][other_frame + H][j](x, y, x_i, y_i, c) = i16(sum(pow((I[current_frame](x + u.x, y + u.y, c) 
+                    - I[current_frame + other_frame](x_i + u.x, y_i + u.y, c)), 2) 
+                    * exp(-(pow(u.x, 2) + pow(u.y, 2)) / 
+                        (float)(2 * pow(s / 2, 2)))));
+}
+
+

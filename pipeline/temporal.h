@@ -14,7 +14,7 @@ void swap_element(vector<vector<short>>* a, int b, int c);
 void sift_down(vector<vector<short>> *a, int start, int end);
 void heapify(vector<vector<short>>* a);
 void sort_neighbors(vector<vector<short>*>* a);
-vector<short>* get_neighbor_ssd(short frame, short x, short y);
+vector<short>* get_neighbor_ssd(short frame, vector<short>* point);
 short get_random_x_y();
 vector<short>* get_random_coord();
 void print_v_i(vector<short> v_i);
@@ -49,9 +49,13 @@ void interleave_propagate_and_random_search(short frame, vector<vector<short>*>*
 
 using namespace cv;
 vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset);
-float non_local_means_estimate(short x, short y, short frame);
+float non_local_means_estimate(vector<short>* point, short frame);
 float normalization_factor(short frame);
 float noise_level_factor();
 float calc_weighted_ssd(short frame, short i, short j);
 float calc_input(short frame, short offset, short i, short j);
-void load_halide_functions_nlm(short frame, short i, short j);
+void load_halide_functions_nlm(short current_frame, short other_frame, 
+        vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
+
+
+extern vector<vector<vector<short>*>*>* aknn_across_frames[width][height];
