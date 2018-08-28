@@ -11,3 +11,5 @@ opencv_contrib
 opencv
 flir-util
 *.swp
+pipeline/frames_kane
+

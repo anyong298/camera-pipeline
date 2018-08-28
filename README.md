@@ -4,37 +4,24 @@ University of Rochester
 
 Authors: Prikshet Sharma, Oliver Ziqi Zhang
 
-This is an ISP pipeline built in Halide to help optimize optical systems. 
+ISP pipeline built using Halide and is under development. The pipeline aims to help optimize optical systems. 
 
 ## Getting Started
-edit pipeline.cpp to change the stages of the pipeline. 
-make pipeline to compile the pipeline. 
+edit ```pipeline.cpp``` to manage various stages in the pipeline. 
+```make pipeline``` to compile the pipeline. 
 
 ### Prerequisites
 
 OpenCV latest release: https://opencv.org/releases.html 
 
-```
-Give examples
-```
-
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
+Clone Halide: https://github.com/halide/Halide/releases 
 
-Download Halide: https://github.com/halide/Halide/releases 
+After cloing the Halide repo, copy the contents of this repo in the Halide folder. 
 
-```
-After downloading the Halide repo, copy the contents of this repo in the Halide folder. 
-```
-
-And repeat
-
-```
-until finished
-```
-Run make pipeline in the folder pipeline.
-End with an example of getting some data out of the system or using it for a little demo
+Run ```make pipeline``` in the folder pipeline.
+End with an example of getting some data out of the system or using it for a little demo.
 
 ## Running the tests
 
@@ -42,45 +29,25 @@ Some stages in the pipeline require additional arguments, so make sure you put t
 
 ### Break down into end to end tests
 
-Explain what these tests test and why
+An example of how to stage the pipeline is given in main.cpp. For example:
 
 ```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
+Buffer<uint8_t> stage1 = load_image("images/inputs/" + std::string(argv[1]));
+Buffer<uint8_t> stage2 = denoise_no_approx(stage1);
+save_image(stage2, "images/outputs/" + std::string(argv[1]) + "_obr.png");
 
 ```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
 
 ## Contributing
 
 Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
 
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
 ## Authors
 
-* **Prikshet Sharma** - *Initial work* - [zendevil](https://github.com/zendevil)
-* **Oliver Ziqi Zhang** - *Initial work* - [ziqizh](https://github.com/ziqizh)
+* **Prikshet Sharma** - [zendevil](https://github.com/zendevil)
+* **Oliver Ziqi Zhang** - [ziqizh](https://github.com/ziqizh)
 
-
-See also the list of [contributors](https://github.com/horizon-research) who participated in this project.
+See also the list of [contributors](https://github.com/horizon-research) who participated in University of Rochester's computer vision and computational photoraphy research project.
 
 ## License
 
