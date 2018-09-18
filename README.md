@@ -1,8 +1,8 @@
-# camera-pipeline
-
-University of Rochester
+# Camera Pipeline
 
 Authors: Prikshet Sharma, Oliver Ziqi Zhang
+
+University of Rochester
 
 ISP pipeline built using Halide and is under development. The pipeline aims to help optimize optical systems. 
 
@@ -33,7 +33,23 @@ Assuming the camera sensor has a Bayer filter, the pipeline stage is mandatory f
 Advanced Demosaic uses a fancier approach taken from this research paper. 
 
 ### Spatial denoising
-Please see this link where the algorithm is taken from.
+Spatial denoising integrates a spatial and a range filter. 
+Imagine the noisy image is composed of small n x n pixel tiles.
+*Spatial Filter Algorithm*
+1. Multiply each pixel in a given tile by a weight. The weight is a function (standard gaussian) of the pixel's displacement from the central pixel of the tile.
+2. Take mean of weighted pixels. 
+3. Use the mean to denoise the tile's central pixel. (See Spatial Denoising Algorithm) 
+
+*Range Filter Algorithm*
+1. Multiply each pixel in a given tile by a weight. The weight is a function (standard gaussian) of how similar the pixel is to the central pixel of the tile.
+2. Take mean of the weighted pixels in the tile.
+3. Use the mean to denoise the tile's central pixel. (See Spatial Denoising Algorithm)
+
+*Spatial Denoising Algorithm*
+1. Multiply _spatial filter mean_ * _range filter mean_ *_central pixel_. 
+2. Normalize the product. Result is the denoised version of the central pixel of the tile. 
+3. Repeat for each tile in the image (for each color channel).
+
 
 ### White Balance 
 White balance corrects the 'temperature' of the image by taking the lightest pixel in the image, changing it to white (0, 0, 0) and then normalizing every other pixel based on the lightest pixel.  
@@ -41,8 +57,10 @@ White balance corrects the 'temperature' of the image by taking the lightest pix
 ### Gamma Correction
 Gamma correction requires that the image be converted to YCbCr format, which hasn't yet been implemented. 
 
-### Temporal Denoising 
+### Temporal Denoising
+
 Temporal Denoising performs the algorithm taken from this MIT and Microsoft research paper and uses the optical flow algorithm from the openCV library. We're still working on an optical flow algorithm implemented in Halide. 
+people.csail.mit.edu/celiu/pdfs/videoDenoising.pdf
 
 ## Running the tests
 
