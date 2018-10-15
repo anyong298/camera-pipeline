@@ -92,7 +92,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 * **Prikshet Sharma** - [zendevil](https://github.com/zendevil)
 * **Oliver Ziqi Zhang** - [ziqizh](https://github.com/ziqizh)
 
-See also the list of [contributors](https://github.com/horizon-research) who participated in University of Rochester's computer vision and computational photoraphy research project.
+See also the list of [contributors](https://github.com/horizon-research) who participated in University of Rochester's Visual Computing research project.
 
 ## License
 
