@@ -4,67 +4,73 @@ Authors: Prikshet Sharma, Oliver Ziqi Zhang
 
 University of Rochester
 
-ISP pipeline built using Halide and is under development. The pipeline aims to help optimize optical systems. 
+The under development ISP pipeline is written in Halide that aims optimize optical systems and camera pipeline for computer vision and computational photography applications. Feel free to contact the co-author of the pipeline and the author of this README at pshar10@u.rochester.edu 
 
 ## Getting Started
-edit ```pipeline.cpp``` to manage various stages in the pipeline. 
-```make pipeline``` to compile the pipeline. 
+Mix and match the various pipeline stages by editing ```pipeline.cpp```  
+
+Command to compile the pipeline: ```make pipeline```
 
 ## Prerequisites
 
-OpenCV latest release: https://opencv.org/releases.html 
+Currently, we use the OpenCV library for computing Optical Flow for the temporal denoising stage. We are implementing an Optical Flow algorithm in Halide. Download the OpenCV latest release here: https://opencv.org/releases.html 
 
-## Installing
+## Installing the Pipeline Framework
 
 Clone Halide: https://github.com/halide/Halide/releases 
 
-After cloing the Halide repo, copy the contents of this repo in the Halide folder. 
+After cloning the Halide repo, copy the contents of this repo in the Halide folder. 
 
-Run ```make pipeline``` in the folder pipeline.
-End with an example of getting some data out of the system or using it for a little demo.
+In the subfolder pipeline, run ```make pipeline```.
 
-## Pipeline Stages
 
-### Optically Black Region
-Camera sensors has a rectangluar region coated with an optically black compound on one edge of the camera sensor. This coated region is known as the optically black region and is used to correct the brightness of the image. Our optically black region function in Halide simply takes the average of the intensities of the pixels in the optically black region and subtracts the that number from each channel of every pixel in the image.   
+## Implemented Pipeline Stages
+All stages are implemented in ```pipeline.cpp```, except 'Temporal Denoising using Optical Flow', which is implemented in ```temporal.cpp```.
+
+### Optically Black Region (OBR)
+For those who don't know, camera sensors have one edge coated with an optically black region, which is used to correct image brightness. 
+In ```pipeline.cpp``` the function ```Buffer<uint8_t> obr(Buffer<uint8_t> input)``` averages of the intensities of the optically black region pixels, and subtracts the average from each channel of every pixel in the image.   
 
 ### Demosaic (Naive and Advanced)
-Assuming the camera sensor has a Bayer filter, the pipeline stage is mandatory for any computation photography and computer vision applications. To compute a color channel value for the current pixel, the naive version of demosaic simply takes the average of the surrounding pixels of the given color (RGB).
-Advanced Demosaic uses a fancier approach taken from this research paper. 
+Research shows that this stage is mandatory for any computational photography and computer vision application. This implementation is for Bayer Filters.  
+
+We implemeted two versions, naive and advanced. 
+
+The naive version ```Buffer<uint8_t> demosaic_naive(Buffer<uint8_t> input)``` naively averages the adjacent pixels to compute current pixel(for each color channel).
+
+Advanced Demosaic ```Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)``` is implemented using this research paper. 
 
 ### Spatial denoising
-Spatial denoising integrates a spatial and a range filter. 
-Imagine the noisy image is composed of small n x n pixel tiles.
-*Spatial Filter Algorithm*
-1. Multiply each pixel in a given tile by a weight. The weight is a function (standard gaussian) of the pixel's displacement from the central pixel of the tile.
-2. Take mean of weighted pixels. 
-3. Use the mean to denoise the tile's central pixel. (See Spatial Denoising Algorithm) 
+Spatial denoising comprises of a spatial and a range filter. 
+Explanation of the implementation: Suppose the noisy image is composed of small n x n pixel tiles.
 
-*Range Filter Algorithm*
+
+*Concise Spatial Filter Algorithm*
+1. Multiply each pixel in a given tile by a weight--the weight is a function (standard gaussian) of the pixel's displacement from the central pixel of the tile.
+2. Take mean of weighted pixels. 
+3. Use the mean to denoise the tile's central pixel. (See Spatial Denoising Algorithm)
+
+*Concise Range Filter Algorithm*
 1. Multiply each pixel in a given tile by a weight. The weight is a function (standard gaussian) of how similar the pixel is to the central pixel of the tile.
 2. Take mean of the weighted pixels in the tile.
 3. Use the mean to denoise the tile's central pixel. (See Spatial Denoising Algorithm)
 
-*Spatial Denoising Algorithm*
+* Concise Spatial Denoising Algorithm*
 1. Multiply _spatial filter mean_ * _range filter mean_ *_central pixel_. 
 2. Normalize the product. Result is the denoised version of the central pixel of the tile. 
 3. Repeat for each tile in the image (for each color channel).
 
+Research paper reference: M. Elad, “On the origin of the bilateral filter and ways to improve it,” IEEE Transactions in Image Processing, vol. 11, no. 10, pp. 1141-1151, 2002.
 
 ### White Balance 
-White balance corrects the 'temperature' of the image by taking the lightest pixel in the image, changing it to white (0, 0, 0) and then normalizing every other pixel based on the lightest pixel.  
+White balance corrects the color temperature. It takes the lightest pixel in the image, replaces it with white (R=0, G=0, B=0), and then normalizes every other pixel based on lightest pixel's previous value.  
 
 ### Gamma Correction
 Gamma correction requires that the image be converted to YCbCr format, which hasn't yet been implemented. 
 
-### Temporal Denoising
+### Temporal Denoising using Optical Flow 
 
-Temporal Denoising performs the algorithm taken from this MIT and Microsoft research paper and uses the optical flow algorithm from the openCV library. We're still working on an optical flow algorithm implemented in Halide. 
-people.csail.mit.edu/celiu/pdfs/videoDenoising.pdf
-
-## Running the tests
-
-Some stages in the pipeline require additional arguments, so make sure you put those arguments. 
+Temporal Denoising performs the algorithm taken from this MIT and Microsoft research paper people.csail.mit.edu/celiu/pdfs/videoDenoising.pdf. The Optical Flow is computed using OpenCV. We're currently implementing Optical Flow in Halide.  
 
 ### Break down into end to end tests
 
