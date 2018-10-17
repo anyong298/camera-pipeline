@@ -236,7 +236,7 @@ Buffer<uint8_t> demosaic(Buffer<uint8_t> input0)
 
 }
 
-Buffer<uint8_t> denoise_no_approx(Buffer<uint8_t> input) 
+Buffer<uint8_t> spatial_denoise(Buffer<uint8_t> input) 
 {
 	//Buffer<uint8_t> input = Tools::load_image(argv[1]);
 
