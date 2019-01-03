@@ -16,19 +16,16 @@ using namespace Halide;
 using namespace Halide::ConciseCasts;
 
 const int n_channels = 3;
-const int n_frames = 11;
 
+Buffer<uint8_t> frame_b[n_frames];
 
-
-Buffer<uint8_t> input[n_frames];
-
-void get_input() 
+void get_frames() 
 {
     string path;
 
     for(int i = 0; i < n_frames; i++) {
         path = "./frames/" + to_string(i + 1) + ".png";
-        input[i] = Tools::load_image(path);   
+        frame_b[i] = Tools::load_image(path);   
     }
 
 }
@@ -36,7 +33,7 @@ void get_input()
 
 Func D[n_frames], I[n_frames], Dx_right_in[n_frames], Dx_left_in[n_frames], 
      Dy_up_in[n_frames], Dy_down_in[n_frames], Dx_right_out[n_frames], Dx_left_out[n_frames], 
-     Dy_up_out[n_frames], Dy_down_out[n_frames], weighted_ssd[n_frames][n_frames][n_frames];
+     Dy_up_out[n_frames], Dy_down_out[n_frames], weighted_ssd[n_frames][n_frames][K];
 
 
 void load_halide_functions(short frame) 
@@ -57,7 +54,7 @@ void load_halide_functions(short frame)
     RDom dy_down_out(-s, s, s, s + 1);
     RDom dy_down_in(-s, s, s - 1, s);
     //cout<<"loading halide input for frame "<<frame<<endl; 
-    I[frame](x, y, c) = input[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);  
+    I[frame](x, y, c) = frame_b[frame](clamp(x, s, width - s), clamp(y, s, height - s), c);  
     
     D[frame](x, y, x_i, y_i, c) = i16(sum(pow((I[frame](x + u.x, y + u.y, c) 
                             - I[frame](x_i + u.x, y_i + u.y, c)), 2)));
@@ -87,20 +84,6 @@ void load_halide_functions(short frame)
                                     - I[frame](x_i + dy_down_out.x, y_i + dy_down_out.y, c)), 2)));
 }
 
-
-void initiate_neighbors(short current_frame, vector<vector<short>*>* neighbors_h[height][width]) 
-{
-    srand(17);
-    for(short y = 0; y < height; y++)
-        for(short x = 0; x < width; x++) {
-            vector<vector<short>*>* neighbors;
-            neighbors = new vector<vector<short>*>;
-            generate_random_offsets_and_ssds(current_frame, x, y, neighbors); 
-            neighbors_h[y][x] = neighbors;
-         }
-    //cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
-}
-
 void generate_random_offsets_and_ssds(short current_frame, vector<short>* point, vector<vector<short>*>* neighbors)
 {
     for(ushort i = 0; i < K; i++) {
@@ -112,6 +95,33 @@ void generate_random_offsets_and_ssds(short current_frame, vector<short>* point,
     //    cout<<"neighbors of 33, 33 when generating randoms"<<endl;
     //    print_neighbors(neighbors);    
 }
+
+void initiate_neighbors(short current_frame, vector<vector<short>*>* neigh_heap[height][width]) 
+{
+    
+    srand(17);
+    
+    for(short y = 0; y < height; y++)
+        for(short x = 0; x < width; x++) {
+            
+            vector<vector<short>*>* neighbors;
+            neighbors = new vector<vector<short>*>;
+            vector<short>* point = new vector<short>;
+
+            point->push_back(x);
+            point->push_back(y);
+            
+            generate_random_offsets_and_ssds(current_frame, point, neighbors); // 0 seconds
+            
+            neigh_heap[y][x] = neighbors;
+        
+         } // 2.42 seconds
+
+
+    //cout<<"initial heap size "<<neighbors_h[0][0]->size()<<endl ;
+}
+
+
 
 vector<short>* get_neighbor_ssd(short current_frame, vector<short>* point) 
 {
@@ -183,26 +193,31 @@ float box_muller_trans(float x)
 
 
 
-void propagate_neighbors(short frame, vector<vector<short>*>* neighbors_h[height][width]) 
+void propagate_neighbors(short frame, vector<vector<short>*>* neigh_heap[height][width]) 
 {
+    
     for(short y = 1; y < height; ++y)     
         for(short x = 1; x < width; ++x) {
-            propagate_scanline(frame, x, y, neighbors_h);
-        }
+            
+            propagate_scanline(frame, x, y, neigh_heap);
+            
+        } // 1.6-4.1 seconds
    
     for(short y = height - 2; y >= 0; --y)     
         for(short x = width - 2; x >= 0; --x) {
-            propagate_reverse_scanline(frame, x, y, neighbors_h);
+            propagate_reverse_scanline(frame, x, y, neigh_heap);
         }
 } 
 
 
-void propagate_scanline(short frame, short x, short y, vector<vector<short>*>* neighbors_h[height][width])
+void propagate_scanline(short frame, short x, short y, vector<vector<short>*>* neigh_heap[height][width])
 {
     short offset_x, offset_y, offset_ssd; 
+    clock_t t = clock();
+
     
-    for(vector<vector<short>*>::iterator it = neighbors_h[y][x - 1]->begin(); 
-        it != neighbors_h[y][x - 1]->end(); ++it) {
+    for(vector<vector<short>*>::iterator it = neigh_heap[y][x - 1]->begin(); 
+        it != neigh_heap[y][x - 1]->end(); ++it) {
         vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
@@ -210,11 +225,13 @@ void propagate_scanline(short frame, short x, short y, vector<vector<short>*>* n
         new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'r'));
         new_neighbor->push_back((short) offset_x + 1);
         new_neighbor->push_back(offset_y);
-        neighbors_h[y][x]->push_back(new_neighbor);
+        neigh_heap[y][x]->push_back(new_neighbor);
     }
+    t = clock() - t;
+            cout<<"time tester "<<(float)t/CLOCKS_PER_SEC<<" seconds"<<endl;
 
-    for(vector<vector<short>*>::iterator it = neighbors_h[y - 1][x]->begin(); 
-        it != neighbors_h[y - 1][x]->end(); ++it) {
+    for(vector<vector<short>*>::iterator it = neigh_heap[y - 1][x]->begin(); 
+        it != neigh_heap[y - 1][x]->end(); ++it) {
         vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
@@ -222,16 +239,16 @@ void propagate_scanline(short frame, short x, short y, vector<vector<short>*>* n
         new_neighbor->push_back(calculate_new_ssd(frame, x, y, offset_x, offset_y, offset_ssd, 'd'));
         new_neighbor->push_back(offset_x);
         new_neighbor->push_back((short) offset_y + 1);
-        neighbors_h[y][x]->push_back(new_neighbor);
+        neigh_heap[y][x]->push_back(new_neighbor);
     }
-    sort_neighbors(neighbors_h[y][x]);
+    sort_neighbors(neigh_heap[y][x]);
 }
 
-void propagate_reverse_scanline(short frame, short x, short y, vector<vector<short>*>* neighbors_h[height][width])
+void propagate_reverse_scanline(short frame, short x, short y, vector<vector<short>*>* neigh_heap[height][width])
 {
     short offset_x, offset_y, offset_ssd;
-    for(vector<vector<short>*>::iterator it = neighbors_h[y][x + 1]->begin(); 
-        it != neighbors_h[y][x + 1]->end(); ++it) {
+    for(vector<vector<short>*>::iterator it = neigh_heap[y][x + 1]->begin(); 
+        it != neigh_heap[y][x + 1]->end(); ++it) {
         vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
@@ -241,8 +258,8 @@ void propagate_reverse_scanline(short frame, short x, short y, vector<vector<sho
         new_neighbor->push_back(offset_y);
     }
 
-    for(vector<vector<short>*>::iterator it = neighbors_h[y + 1][x]->begin(); 
-        it != neighbors_h[y + 1][x]->end(); ++it) {
+    for(vector<vector<short>*>::iterator it = neigh_heap[y + 1][x]->begin(); 
+        it != neigh_heap[y + 1][x]->end(); ++it) {
         vector<short>* new_neighbor = new vector<short>;
         offset_ssd = (*it)->at(0);
         offset_x = (*it)->at(1);
@@ -251,7 +268,7 @@ void propagate_reverse_scanline(short frame, short x, short y, vector<vector<sho
         new_neighbor->push_back(offset_x);
         new_neighbor->push_back((short)offset_y - 1);
     }
-    sort_neighbors(neighbors_h[y][x]);
+    sort_neighbors(neigh_heap[y][x]);
 }
 
 short calculate_new_ssd(short frame, short x, short y, short offset_x, 
@@ -301,6 +318,7 @@ void random_search(short frame, vector<vector<short>*>* neighbors_h[height][widt
         for(int x = 0; x < width; ++x) {     
             for(int i = 0; i < M; ++i) {
                 vector<short>* random_guess = new vector<short>;
+
                 short offset_x = get_random_x() * pow(0.5, i);
                 short offset_y = get_random_y() * pow(0.5, i);
                  
@@ -336,29 +354,37 @@ vector<vector<short>*>* get_neighbors(short x, short y, vector<vector<short>*>* 
 }
 
 
-float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame)
+float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, 
+    vector<short>* patch_coord_other_frame, ushort neighbor)
 {
-    load_halide_functions_nlm(current_frame, other_frame, 
-            patch_coord_current_frame, patch_coord_other_frame);
-    Buffer<int16_t> weighted_ssd_buff(1, 1, 1, 1, 3);
-    short x = patch_coord_current_frame->at(0);
-    short y = patch_coord_current_frame->at(1);
-    short x_ = patch_coord_other_frame->at(0);
-    short y_ = patch_coord_other_frame->at(1);
-    weighted_ssd_buff.set_min(x, y, x_, y_, 0);    
-    weighted_ssd[current_frame][other_frame + H][neighbor].realize(weighted_ssd_buff);
-    return weighted_ssd_buff(x, y, x_, y_, 0);
+   load_halide_functions_nlm(current_frame, other_frame, 
+           patch_coord_current_frame, patch_coord_other_frame);
+
+   Buffer<int16_t> weighted_ssd_buff(1, 1, 1, 1, 3);
+
+   short x = patch_coord_current_frame->at(0);
+   short y = patch_coord_current_frame->at(1);
+
+   short x_ = patch_coord_other_frame->at(0);
+   short y_ = patch_coord_other_frame->at(1);
+
+   
+   weighted_ssd_buff.set_min(x, y, x_, y_, 0);    
+   weighted_ssd[current_frame][other_frame + H][neighbor].realize(weighted_ssd_buff);
+   return weighted_ssd_buff(x, y, x_, y_, 0);
 }
 
 short weighted_ssd_neighbor_counter = 0;
 void load_halide_functions_nlm(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame)
 {
-    Var x, y, x_i, y_i, c;
-    RDom u(-s, s, -s, s);
-    weighted_ssd[current_frame][other_frame + H][j](x, y, x_i, y_i, c) = i16(sum(pow((I[current_frame](x + u.x, y + u.y, c) 
-                    - I[current_frame + other_frame](x_i + u.x, y_i + u.y, c)), 2) 
-                    * exp(-(pow(u.x, 2) + pow(u.y, 2)) / 
-                        (float)(2 * pow(s / 2, 2)))));
+   Var x, y, x_i, y_i, c;
+   RDom u(-s, s, -s, s);
+   for(ushort neighbor = 0; neighbor < K; neighbor++) {
+    weighted_ssd[current_frame][other_frame + H][neighbor](x, y, x_i, y_i, c) = i16(sum(pow((I[current_frame](x + u.x, y + u.y, c) 
+                   - I[current_frame + other_frame](x_i + u.x, y_i + u.y, c)), 2) 
+                   * exp(-(pow(u.x, 2) + pow(u.y, 2)) / 
+                       (float)(2 * pow(s / 2, 2))))); 
+   }
 }
 
 

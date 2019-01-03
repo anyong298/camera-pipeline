@@ -5,7 +5,8 @@ const short H = 5;
 const short height = 50;
 const short width = 50;
 const ushort s = 10; 
-void get_input();
+const int n_frames = 11;
+void get_frames();
 float box_muller_trans(float x);
 int i_parent(int i);
 int i_left_child(int i);
@@ -50,12 +51,12 @@ void interleave_propagate_and_random_search(short frame, vector<vector<short>*>*
 using namespace cv;
 vector<Point2f> get_offset(Point2f point, short current_frame, short next_frame_offset);
 float non_local_means_estimate(short current_frame, vector<short>* patch_coord_current_frame);
-float normalization_factor(short frame);
+float normalization_factor(short frame, vector<short>* curr_frame_coord);
 float noise_level_factor();
-float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
+float calc_weighted_ssd(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame, ushort neighbor);
 float calc_input(short current_frame, short other_frame, vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
 void load_halide_functions_nlm(short current_frame, short other_frame, 
         vector<short>* patch_coord_current_frame, vector<short>* patch_coord_other_frame);
 
 
-extern vector<vector<vector<short>*>*>* aknn_across_frames[width][height];
+extern vector<vector<vector<short>*>*>*** aknn_across_frames;
